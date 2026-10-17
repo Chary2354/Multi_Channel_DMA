@@ -420,6 +420,6 @@ Found and reported 0 problems.
      $shift                          2
      $sub                            1
 
-End of script. Logfile hash: f87d35266e, CPU: user 0.20s system 0.02s, MEM: 12.59 MB peak
+End of script. Logfile hash: f87d35266e, CPU: user 0.20s system 0.01s, MEM: 12.67 MB peak
 Yosys 0.33 (git sha1 2584903a060)
-Time spent: 31% 5x opt_expr (0 sec), 16% 3x opt_dff (0 sec), ...
+Time spent: 29% 5x opt_expr (0 sec), 15% 3x opt_dff (0 sec), ...
