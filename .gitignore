@@ -1,0 +1,11 @@
+# Simulation outputs
+sim/dma_sim
+sim/*.vcd
+sim/*.vvp
+
+# Temporary editor files
+*.swp
+*~
+
+# Logs
+*.log
