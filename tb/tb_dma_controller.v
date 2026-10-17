@@ -180,6 +180,66 @@ module tb_dma_controller;
         end else begin
             $display("TEST 3 PASSED: simultaneous requests handled");
         end
+
+        // Test 4: Memory backpressure.
+        // Hold mem_wr_ready low and verify the write stays stable.
+
+        @(negedge clk);
+
+        // Configure channel 0 for a one-word transfer.
+        memory[8] = 32'hCAFE1234;  // Source address 0x20
+
+        ch_src_addr[31:0] = 32'h00000020;
+        ch_dst_addr[31:0] = 32'h00000070;
+        ch_length[31:0] = 1;
+
+        // Delay write acceptance.
+        mem_wr_ready = 1'b0;
+        ch_req[0] = 1'b1;
+
+        @(negedge clk);
+        ch_req[0] = 1'b0;
+
+        // Wait until the write request appears.
+        wait (mem_wr_req == 1'b1);
+
+        // Capture the transaction while memory is not ready.
+        begin : backpressure_check
+            reg [31:0] held_addr;
+            reg [31:0] held_data;
+            integer stall_cycle;
+
+            held_addr = mem_wr_addr;
+            held_data = mem_wr_data;
+
+            for (stall_cycle = 0; stall_cycle < 3;
+                 stall_cycle = stall_cycle + 1) begin
+                @(negedge clk);
+
+                if (mem_wr_req !== 1'b1 ||
+                    mem_wr_addr !== held_addr ||
+                    mem_wr_data !== held_data) begin
+                    $display("TEST 4 FAILED: write changed during stall");
+                    $fatal(1);
+                end
+            end
+
+            $display("TEST 4: write stayed stable during backpressure");
+        end
+
+        // Allow memory to accept the pending write.
+        @(negedge clk);
+        mem_wr_ready = 1'b1;
+
+        wait (ch_done[0] == 1'b1);
+        @(negedge clk);
+
+        if (memory[28] !== 32'hCAFE1234) begin
+            $display("TEST 4 FAILED: destination data mismatch");
+            $fatal(1);
+        end else begin
+            $display("TEST 4 PASSED: memory backpressure handled");
+        end
         
         repeat (3) @(negedge clk);
         $display("ALL BASIC TESTS PASSED");
