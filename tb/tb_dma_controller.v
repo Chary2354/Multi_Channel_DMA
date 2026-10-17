@@ -132,6 +132,55 @@ module tb_dma_controller;
         wait (ch_error[1] == 1'b1);
         $display("TEST 2 PASSED: zero-length transfer reported an error");
 
+        // Test 3: Simultaneous requests and fixed priority.
+
+        @(negedge clk);
+
+        // Initialize source data.
+        memory[4] = 32'hAAAA1234;
+        memory[5] = 32'hBBBB5678;
+
+        // Channel 0: one word from 0x10 to 0x50.
+        ch_src_addr[31:0] = 32'h00000010;
+        ch_dst_addr[31:0] = 32'h00000050;
+        ch_length[31:0] = 1;
+
+        // Channel 1: one word from 0x14 to 0x60.
+        ch_src_addr[63:32] = 32'h00000014;
+        ch_dst_addr[63:32] = 32'h00000060;
+        ch_length[63:32] = 1;
+
+        // Assert both requests together.
+        ch_req[0] = 1'b1;
+        ch_req[1] = 1'b1;
+
+        // Confirm channel 0 starts first.
+        wait (ch_busy[0] == 1'b1);
+        $display("TEST 3: Channel 0 selected first");
+
+        // Keep channel 1 pending while channel 0 runs.
+        @(negedge clk);
+        ch_req[0] = 1'b0;
+
+        wait (ch_done[0] == 1'b1);
+        $display("TEST 3: Channel 0 transfer completed");
+
+        // Channel 1 should run next.
+        wait (ch_busy[1] == 1'b1);
+        wait (ch_done[1] == 1'b1);
+
+        @(negedge clk);
+        ch_req[1] = 1'b0;
+
+        // Verify both destination values.
+        if (memory[20] !== 32'hAAAA1234 ||
+            memory[24] !== 32'hBBBB5678) begin
+            $display("TEST 3 FAILED: data mismatch");
+            $fatal(1);
+        end else begin
+            $display("TEST 3 PASSED: simultaneous requests handled");
+        end
+        
         repeat (3) @(negedge clk);
         $display("ALL BASIC TESTS PASSED");
         $finish;
